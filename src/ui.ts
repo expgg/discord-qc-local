@@ -1,3 +1,5 @@
+import readline from 'readline';
+
 export const colors = {
 	reset: '\x1b[0m',
 	bold: '\x1b[1m',
@@ -69,24 +71,18 @@ export const renderTable = (headers: string[], rows: string[][]) => {
 		return text + ' '.repeat(Math.max(0, diff));
 	};
 
-	const top = '┌' + colWidths.map((w) => '─'.repeat(w)).join('┬') + '┐';
-	const mid = '├' + colWidths.map((w) => '─'.repeat(w)).join('┼') + '┤';
-	const bot = '└' + colWidths.map((w) => '─'.repeat(w)).join('┴') + '┘';
+	// Clean, professional open-column table (never misaligns with emojis or terminal fonts)
+	const headerLine = '  ' + headers.map((h, i) => pad(`${c.bold}${c.white}${h}${c.reset}`, colWidths[i])).join('  ');
+	const dividerLine = '  ' + colWidths.map((w) => `${c.gray}${'─'.repeat(w)}${c.reset}`).join('  ');
 
-	const headerLine =
-		'│' + headers.map((h, i) => pad(` ${c.bold}${c.white}${h}${c.reset}`, colWidths[i])).join('│') + '│';
-
-	console.log(`${c.gray}${top}${c.reset}`);
 	console.log(headerLine);
-	console.log(`${c.gray}${mid}${c.reset}`);
+	console.log(dividerLine);
 
 	for (const row of rows) {
-		const rowLine =
-			'│' + row.map((cell, i) => pad(` ${cell}${c.reset}`, colWidths[i])).join('│') + '│';
+		const rowLine = '  ' + row.map((cell, i) => pad(`${cell}${c.reset}`, colWidths[i])).join('  ');
 		console.log(rowLine);
 	}
-
-	console.log(`${c.gray}${bot}${c.reset}`);
+	console.log('');
 };
 
 export interface DashboardAccountState {
@@ -108,14 +104,9 @@ export interface DashboardAccountState {
 	errorReason?: string;
 }
 
-let lastDashboardLineCount = 0;
+let prevLineCount = 0;
 
 export const renderLiveDashboard = (accounts: DashboardAccountState[]) => {
-	// Erase previous dashboard block only (preserving all previous logs/tables!)
-	if (lastDashboardLineCount > 0) {
-		process.stdout.write(`\x1b[${lastDashboardLineCount}A\x1b[0J`);
-	}
-
 	const lines: string[] = [];
 
 	lines.push(`${c.bold}${c.cyan}📡 LIVE MULTI-ACCOUNT PROGRESS DASHBOARD${c.reset}`);
@@ -167,14 +158,21 @@ export const renderLiveDashboard = (accounts: DashboardAccountState[]) => {
 		}
 
 		lines.push(`${c.blurple}╰──────────────────────────────────────────────────────────${c.reset}`);
-		lines.push('');
 	});
 
-	const output = lines.join('\n') + '\n';
-	lastDashboardLineCount = lines.length + 1;
-	process.stdout.write(output);
+	const text = lines.join('\n') + '\n';
+
+	// Precisely erase previous dashboard frame without ever creeping up or eating previous logs
+	if (prevLineCount > 0) {
+		readline.cursorTo(process.stdout, 0);
+		readline.moveCursor(process.stdout, 0, -prevLineCount);
+		readline.clearScreenDown(process.stdout);
+	}
+
+	process.stdout.write(text);
+	prevLineCount = (text.match(/\n/g) || []).length;
 };
 
 export const clearDashboardLineState = () => {
-	lastDashboardLineCount = 0;
+	prevLineCount = 0;
 };
