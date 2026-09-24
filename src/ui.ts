@@ -88,6 +88,7 @@ export const renderTable = (headers: string[], rows: string[][]) => {
 export interface DashboardAccountState {
 	name: string;
 	username: string;
+	hasNitro?: boolean;
 	status: 'authenticating' | 'scanning' | 'farming' | 'idle' | 'completed' | 'error';
 	currentQuestName?: string;
 	currentQuestReward?: string;
@@ -137,7 +138,8 @@ export const renderLiveDashboard = (accounts: DashboardAccountState[]) => {
 				break;
 		}
 
-		lines.push(`${c.blurple}╭─ ${c.bold}${c.white}Account [${indexStr}]: ${acc.username || acc.name}${c.reset}  ${statusTag}`);
+		const nitroBadge = acc.hasNitro ? ` ${c.bold}${c.pink}[🚀 NITRO]${c.reset}` : '';
+		lines.push(`${c.blurple}╭─ ${c.bold}${c.white}Account [${indexStr}]: ${acc.username || acc.name}${c.reset}${nitroBadge}  ${statusTag}`);
 
 		if (acc.status === 'farming' && acc.currentQuestName) {
 			const estRemainingSec = Math.max(0, acc.secondsNeeded - acc.secondsDone);

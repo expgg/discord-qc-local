@@ -66,9 +66,11 @@ const main = async () => {
 
 	console.log(`${c.bold}${c.white}🔍 Step 1: Scanning & Validating Tokens (${accounts.length} found)...${c.reset}\n`);
 
+
 	const validatedAccounts: {
 		account: DcAccount;
 		user: any;
+		hasNitro: boolean;
 	}[] = [];
 
 	const validationRows: string[][] = [];
@@ -82,12 +84,17 @@ const main = async () => {
 			const displayName = result.user.global_name
 				? `${result.user.global_name} (@${result.user.username})`
 				: `@${result.user.username}`;
-			validatedAccounts.push({ account: acc, user: result.user });
+			const hasNitro = Boolean(result.user.premium_type && result.user.premium_type > 0);
+			const statusBadge = hasNitro
+				? `${c.neonGreen}🟢 VALID${c.reset}  ${c.pink}🚀 NITRO${c.reset}`
+				: `${c.neonGreen}🟢 VALID${c.reset}`;
+
+			validatedAccounts.push({ account: acc, user: result.user, hasNitro });
 			validationRows.push([
 				indexStr,
 				acc.name,
 				`${displayName} ${c.dim}(${result.user.id})${c.reset}`,
-				`${c.neonGreen}🟢 VALID${c.reset}`,
+				statusBadge,
 			]);
 		} else {
 			validationRows.push([
@@ -113,6 +120,7 @@ const main = async () => {
 	interface AccountSession {
 		account: DcAccount;
 		user: any;
+		hasNitro: boolean;
 		client: ClientQuest;
 		quests: Quest[];
 		totalOrbs: number;
@@ -138,15 +146,15 @@ const main = async () => {
 			console.log(`${c.neonRed}⚠️  Failed to fetch quests for ${item.account.name}: ${err.message}${c.reset}`);
 		}
 
-		// Sort quests so higher orbs come first (Orb Sniping)
-		validQuests = sortQuestsByOrbs(validQuests);
+		// Sort quests so higher orbs come first (Orb Sniping) with Nitro bonus factored in
+		validQuests = sortQuestsByOrbs(validQuests, item.hasNitro);
 
 		let accOrbs = 0;
 		let accItems = 0;
 		let accDecos = 0;
 
 		for (const q of validQuests) {
-			const analysis = analyzeQuestRewards(q);
+			const analysis = analyzeQuestRewards(q, item.hasNitro);
 			accOrbs += analysis.totalOrbs;
 			accItems += analysis.gameItems.length;
 			accDecos += analysis.decorations.length;
@@ -159,6 +167,7 @@ const main = async () => {
 		sessions.push({
 			account: item.account,
 			user: item.user,
+			hasNitro: item.hasNitro,
 			client,
 			quests: validQuests,
 			totalOrbs: accOrbs,
@@ -167,10 +176,14 @@ const main = async () => {
 		});
 
 		const username = item.user.username;
+		const orbsText = accOrbs > 0
+			? (item.hasNitro ? `${c.gold}🔮 ${accOrbs} Orbs ${c.pink}(+20% Nitro)${c.reset}` : `${c.gold}🔮 ${accOrbs} Orbs${c.reset}`)
+			: `${c.gray}0 Orbs${c.reset}`;
+
 		rewardOverviewRows.push([
 			`@${username}`,
 			`${validQuests.length} Quest(s)`,
-			accOrbs > 0 ? `${c.gold}🔮 ${accOrbs} Orbs${c.reset}` : `${c.gray}0 Orbs${c.reset}`,
+			orbsText,
 			accItems > 0 ? `${c.cyan}🎮 ${accItems} Item(s)${c.reset}` : `${c.gray}0 Items${c.reset}`,
 			accDecos > 0 ? `${c.pink}✨ ${accDecos} Deco(s)${c.reset}` : `${c.gray}0 Decos${c.reset}`,
 		]);
@@ -198,6 +211,7 @@ const main = async () => {
 	const dashboardStates: DashboardAccountState[] = sessions.map((s) => ({
 		name: s.account.name,
 		username: `@${s.user.username}`,
+		hasNitro: s.hasNitro,
 		status: s.quests.length > 0 ? 'farming' : 'completed',
 		progressPct: 0,
 		secondsDone: 0,
@@ -228,7 +242,7 @@ const main = async () => {
 		state.status = 'farming';
 
 		for (const quest of session.quests) {
-			const analysis = analyzeQuestRewards(quest);
+			const analysis = analyzeQuestRewards(quest, session.hasNitro);
 			const taskConfig = quest.config?.task_config ?? quest.config?.task_config_v2;
 			const taskName = taskConfig?.tasks
 				? Object.keys(taskConfig.tasks)[0] || 'DESKTOP'
@@ -310,7 +324,9 @@ ${c.neonGreen}╭─────────────────────
 	const summaryRows: string[][] = dashboardStates.map((s) => [
 		s.username,
 		`${s.questsCompleted}/${s.totalQuests} Quests`,
-		`${c.gold}🔮 ${s.orbsEarned} Orbs${c.reset}`,
+		s.hasNitro
+			? `${c.gold}🔮 ${s.orbsEarned} Orbs ${c.pink}(+20% Nitro)${c.reset}`
+			: `${c.gold}🔮 ${s.orbsEarned} Orbs${c.reset}`,
 		`${c.cyan}🎮 ${s.itemsEarned.length} Item(s)${c.reset}`,
 		`${c.pink}✨ ${s.decosEarned.length} Deco(s)${c.reset}`,
 		`${c.neonGreen}✅ FINISHED${c.reset}`,
