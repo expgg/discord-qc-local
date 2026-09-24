@@ -8,6 +8,7 @@ import {
 	renderBanner,
 	renderTable,
 	renderLiveDashboard,
+	clearDashboardLineState,
 	DashboardAccountState,
 } from './ui';
 import type { Quest } from './quest';
@@ -292,6 +293,7 @@ const main = async () => {
 
 	// Final render of the dashboard
 	renderLiveDashboard(dashboardStates);
+	clearDashboardLineState();
 
 	// 5. Final Celebratory Summary
 	const totalEarnedOrbs = dashboardStates.reduce((a, s) => a + s.orbsEarned, 0);
@@ -300,9 +302,9 @@ const main = async () => {
 	const totalQuestsFinished = dashboardStates.reduce((a, s) => a + s.questsCompleted, 0);
 
 	console.log(`
-${c.neonGreen}╭──────────────────────────────────────────────────────────────────────────╮
-│  ${c.bold}${c.white}🎉 ALL QUESTS PROCESSED SUCCESSFULLY!${c.reset}${c.neonGreen}                                  │
-╰──────────────────────────────────────────────────────────────────────────╯${c.reset}
+${c.neonGreen}╭──────────────────────────────────────────────────────────╮
+│ ${c.bold}${c.white}🎉 ALL QUESTS PROCESSED SUCCESSFULLY!                    ${c.reset}${c.neonGreen}│
+╰──────────────────────────────────────────────────────────╯${c.reset}
 `);
 
 	const summaryRows: string[][] = dashboardStates.map((s) => [

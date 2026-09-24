@@ -15,14 +15,7 @@ export const colors = {
 	gold: '\x1b[38;2;255;184;108m',
 	yellow: '\x1b[38;2;241;250;140m',
 	blurple: '\x1b[38;2;88;101;242m',
-	purple: '\x1b[38;2;189;147;249m',
 	pink: '\x1b[38;2;255;121;198m',
-
-	// Backgrounds
-	bgDark: '\x1b[48;2;24;24;37m',
-	bgBlurple: '\x1b[48;2;88;101;242m',
-	bgGreen: '\x1b[48;2;40;167;69m',
-	bgRed: '\x1b[48;2;220;53;69m',
 };
 
 const c = colors;
@@ -35,7 +28,7 @@ export const formatTime = (seconds: number): string => {
 
 export const createProgressBar = (
 	percent: number,
-	width: number = 22,
+	width: number = 20,
 	filledColor = c.cyan,
 	emptyColor = c.gray,
 ): string => {
@@ -51,25 +44,24 @@ export const createProgressBar = (
 };
 
 export const renderBanner = () => {
-	console.clear();
 	console.log(`
-${c.blurple}╭──────────────────────────────────────────────────────────────────────────╮
-│  ${c.bold}${c.white}⚡ DISCORD QUEST AUTO-COMPLETER & ORB SNIPER${c.reset}${c.blurple}                        │
-│  ${c.dim}${c.lightGray}Priority: High-Orb Quests First | Concurrency: All Accounts In Parallel${c.reset}${c.blurple}   │
-╰──────────────────────────────────────────────────────────────────────────╯${c.reset}
+${c.blurple}╭──────────────────────────────────────────────────────────╮
+│ ${c.bold}${c.white}⚡ DISCORD QUEST AUTO-COMPLETER & ORB SNIPER             ${c.reset}${c.blurple}│
+│ ${c.dim}${c.lightGray}Priority: High-Orb First • Concurrency: All Accounts     ${c.reset}${c.blurple}│
+╰──────────────────────────────────────────────────────────╯${c.reset}
 `);
 };
 
 export const renderTable = (headers: string[], rows: string[][]) => {
+	const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*m/g, '');
+
 	const colWidths = headers.map((h, i) => {
 		const maxRowLen = rows.reduce(
-			(max, row) => Math.max(max, (row[i] || '').replace(/\x1b\[[0-9;]*m/g, '').length),
+			(max, row) => Math.max(max, stripAnsi(row[i] || '').length),
 			0,
 		);
 		return Math.max(h.length, maxRowLen) + 2;
 	});
-
-	const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*m/g, '');
 
 	const pad = (text: string, width: number) => {
 		const len = stripAnsi(text).length;
@@ -116,18 +108,18 @@ export interface DashboardAccountState {
 	errorReason?: string;
 }
 
+let lastDashboardLineCount = 0;
+
 export const renderLiveDashboard = (accounts: DashboardAccountState[]) => {
-	// Move cursor to top or clear smoothly
-	process.stdout.write('\x1b[H\x1b[2J');
+	// Erase previous dashboard block only (preserving all previous logs/tables!)
+	if (lastDashboardLineCount > 0) {
+		process.stdout.write(`\x1b[${lastDashboardLineCount}A\x1b[0J`);
+	}
 
-	console.log(`
-${c.blurple}╭──────────────────────────────────────────────────────────────────────────╮
-│  ${c.bold}${c.white}⚡ DISCORD QUEST AUTO-COMPLETER & ORB SNIPER${c.reset}${c.blurple}                        │
-│  ${c.dim}${c.lightGray}Priority: High-Orb Quests First | Concurrency: All Accounts In Parallel${c.reset}${c.blurple}   │
-╰──────────────────────────────────────────────────────────────────────────╯${c.reset}
-`);
+	const lines: string[] = [];
 
-	console.log(`${c.bold}${c.cyan}📡 LIVE MULTI-ACCOUNT PROGRESS DASHBOARD${c.reset}\n`);
+	lines.push(`${c.bold}${c.cyan}📡 LIVE MULTI-ACCOUNT PROGRESS DASHBOARD${c.reset}`);
+	lines.push('');
 
 	accounts.forEach((acc, idx) => {
 		const indexStr = `${idx + 1}/${accounts.length}`;
@@ -138,13 +130,13 @@ ${c.blurple}╭─────────────────────�
 				statusTag = `${c.yellow}⏳ Authenticating...${c.reset}`;
 				break;
 			case 'scanning':
-				statusTag = `${c.cyan}🔍 Scanning Quests & Rewards...${c.reset}`;
+				statusTag = `${c.cyan}🔍 Scanning Quests...${c.reset}`;
 				break;
 			case 'farming':
 				statusTag = `${c.neonGreen}⚡ Farming Active${c.reset}`;
 				break;
 			case 'completed':
-				statusTag = `${c.bold}${c.neonGreen}✅ Finished (${acc.questsCompleted}/${acc.totalQuests} Quests)${c.reset}`;
+				statusTag = `${c.bold}${c.neonGreen}✅ Completed (${acc.questsCompleted}/${acc.totalQuests} Quests)${c.reset}`;
 				break;
 			case 'error':
 				statusTag = `${c.neonRed}❌ Error: ${acc.errorReason || 'Failed'}${c.reset}`;
@@ -154,26 +146,35 @@ ${c.blurple}╭─────────────────────�
 				break;
 		}
 
-		console.log(`${c.blurple}┌─ ${c.bold}${c.white}Account [${indexStr}]: ${acc.username || acc.name}${c.reset}  ${statusTag}`);
+		lines.push(`${c.blurple}╭─ ${c.bold}${c.white}Account [${indexStr}]: ${acc.username || acc.name}${c.reset}  ${statusTag}`);
 
 		if (acc.status === 'farming' && acc.currentQuestName) {
 			const estRemainingSec = Math.max(0, acc.secondsNeeded - acc.secondsDone);
-			const progressBar = createProgressBar(acc.progressPct, 24);
+			const progressBar = createProgressBar(acc.progressPct, 20);
 
-			console.log(`${c.blurple}│${c.reset}   🎮 Quest:  ${c.bold}${c.white}"${acc.currentQuestName}"${c.reset} ${c.dim}(${acc.currentQuestTaskType || 'TASK'})${c.reset}`);
-			console.log(`${c.blurple}│${c.reset}   🎁 Reward: ${c.gold}${acc.currentQuestReward || 'Reward'}${c.reset}`);
-			console.log(`${c.blurple}│${c.reset}   📊 Status: ${progressBar} ${c.dim}(${acc.secondsDone}s / ${acc.secondsNeeded}s)${c.reset}`);
-			console.log(
-				`${c.blurple}│${c.reset}   ⏳ Timer:  Elapsed: ${c.cyan}${formatTime(acc.elapsedSeconds)}${c.reset} | Est. Remaining: ${c.yellow}${formatTime(estRemainingSec)}${c.reset}`,
+			lines.push(`${c.blurple}│${c.reset}  🎮 Quest:  ${c.bold}${c.white}"${acc.currentQuestName}"${c.reset} ${c.dim}(${acc.currentQuestTaskType || 'DESKTOP'})${c.reset}`);
+			lines.push(`${c.blurple}│${c.reset}  🎁 Reward: ${c.gold}${acc.currentQuestReward || 'Reward'}${c.reset}`);
+			lines.push(`${c.blurple}│${c.reset}  📊 Status: ${progressBar} ${c.dim}(${acc.secondsDone}s / ${acc.secondsNeeded}s)${c.reset}`);
+			lines.push(
+				`${c.blurple}│${c.reset}  ⏳ Timer:  Elapsed: ${c.cyan}${formatTime(acc.elapsedSeconds)}${c.reset} | Est. Remaining: ${c.yellow}${formatTime(estRemainingSec)}${c.reset}`,
 			);
 		} else if (acc.status === 'completed') {
-			console.log(
-				`${c.blurple}│${c.reset}   🎉 ${c.neonGreen}All available quests completed! Claimed: ${c.gold}🔮 ${acc.orbsEarned} Orbs${c.reset}, ${c.pink}✨ ${acc.decosEarned.length} Decos${c.reset}, ${c.cyan}🎮 ${acc.itemsEarned.length} Items${c.reset}`,
+			lines.push(
+				`${c.blurple}│${c.reset}  🎉 ${c.neonGreen}Done! Claimed: ${c.gold}🔮 ${acc.orbsEarned} Orbs${c.reset}, ${c.pink}✨ ${acc.decosEarned.length} Decos${c.reset}, ${c.cyan}🎮 ${acc.itemsEarned.length} Items${c.reset}`,
 			);
 		} else if (acc.status === 'error') {
-			console.log(`${c.blurple}│${c.reset}   ⚠️ ${c.neonRed}${acc.errorReason}${c.reset}`);
+			lines.push(`${c.blurple}│${c.reset}  ⚠️ ${c.neonRed}${acc.errorReason}${c.reset}`);
 		}
 
-		console.log(`${c.blurple}└──────────────────────────────────────────────────────────────────────────${c.reset}\n`);
+		lines.push(`${c.blurple}╰──────────────────────────────────────────────────────────${c.reset}`);
+		lines.push('');
 	});
+
+	const output = lines.join('\n') + '\n';
+	lastDashboardLineCount = lines.length + 1;
+	process.stdout.write(output);
+};
+
+export const clearDashboardLineState = () => {
+	lastDashboardLineCount = 0;
 };
