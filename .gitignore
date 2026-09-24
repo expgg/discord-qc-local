@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Sensitive account & token files
+tokens.txt
+accounts.json
+.env
+.env.*
+*.log
+
+# Build & OS files
+dist/
+build/
+.DS_Store
+Thumbs.db

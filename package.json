@@ -1,0 +1,35 @@
+{
+  "name": "exploriot-quest-farmer",
+  "version": "1.0.0",
+  "description": "Private quest auto-completion bot",
+  "main": "bot.ts",
+  "scripts": {
+    "dev": "tsx src/run_all.ts",
+    "start": "tsx src/run_all.ts",
+    "bot": "tsx src/bot.ts"
+  },
+  "keywords": [],
+  "author": "Exploriot",
+  "license": "ISC",
+  "type": "commonjs",
+  "engines": {
+    "node": "^24.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.10.1",
+    "discord-api-types": "^0.38.34",
+    "tsx": "^4.20.6",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@discordjs/core": "2.4.0",
+    "@discordjs/rest": "2.6.0",
+    "@discordjs/ws": "2.0.4",
+    "concurrently": "^10.0.4",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "undici": "6.21.3"
+  }
+}

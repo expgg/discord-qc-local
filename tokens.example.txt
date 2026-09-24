@@ -1,0 +1,8 @@
+# Add your Discord account token(s) below (one per line).
+# Lines starting with # are ignored.
+#
+# Format 1 (Plain token):
+# mfa.xxxxxxxxxxxxxxxxxxxxxx
+#
+# Format 2 (Optional label prefix):
+# MainAccount:mfa.xxxxxxxxxxxxxxxxxxxxxx
